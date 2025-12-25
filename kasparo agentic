@@ -1,0 +1,156 @@
+import json
+from typing import List, Dict
+
+RAW_PRODUCT_DATA = {
+    "product_name": "GlowBoost Vitamin C Serum",
+    "concentration": "10% Vitamin C",
+    "skin_type": ["Oily", "Combination"],
+    "key_ingredients": ["Vitamin C", "Hyaluronic Acid"],
+    "benefits": ["Brightening", "Fades dark spots"],
+    "how_to_use": "Apply 2–3 drops in the morning before sunscreen",
+    "side_effects": "Mild tingling for sensitive skin",
+    "price": 699
+}
+
+class ProductDataParserAgent:
+    def run(self, raw_data: Dict) -> Dict:
+        return {
+            "name": raw_data["product_name"],
+            "concentration": raw_data["concentration"],
+            "skin_type": raw_data["skin_type"],
+            "ingredients": raw_data["key_ingredients"],
+            "benefits": raw_data["benefits"],
+            "usage": raw_data["how_to_use"],
+            "side_effects": raw_data["side_effects"],
+            "price": raw_data["price"]
+        }
+
+class QuestionGenerationAgent:
+    def run(self, product: Dict) -> Dict[str, List[str]]:
+        return {
+            "informational": [
+                f"What is {product['name']}?",
+                "What does Vitamin C do for skin?",
+                "Who should use this serum?"
+            ],
+            "usage": [
+                "How do I apply this serum?",
+                "Can it be used daily?",
+                "Can it be used with sunscreen?"
+            ],
+            "safety": [
+                "Are there any side effects?",
+                "Is it safe for sensitive skin?"
+            ],
+            "purchase": [
+                "What is the price of this product?",
+                "Is this serum worth the price?"
+            ],
+            "comparison": [
+                "How does this compare with other Vitamin C serums?",
+                "Is this better than cheaper alternatives?"
+            ]
+        }
+
+def generate_benefits_block(product: Dict) -> str:
+    return ", ".join(product["benefits"])
+
+
+def generate_ingredients_block(product: Dict) -> str:
+    return ", ".join(product["ingredients"])
+
+
+def generate_skin_type_block(product: Dict) -> str:
+    return ", ".join(product["skin_type"])
+
+class TemplateEngineAgent:
+
+    def faq_template(self, product: Dict, questions: Dict) -> Dict:
+        faqs = [
+            {
+                "question": "What is this product?",
+                "answer": f"{product['name']} is a skincare serum designed for {generate_benefits_block(product)}."
+            },
+            {
+                "question": "How do I use it?",
+                "answer": product["usage"]
+            },
+            {
+                "question": "Who should use it?",
+                "answer": f"It is suitable for {generate_skin_type_block(product)} skin types."
+            },
+            {
+                "question": "What are the key ingredients?",
+                "answer": generate_ingredients_block(product)
+            },
+            {
+                "question": "Are there any side effects?",
+                "answer": product["side_effects"]
+            }
+        ]
+
+        return {
+            "page_type": "FAQ",
+            "product": product["name"],
+            "faqs": faqs
+        }
+
+    def product_page_template(self, product: Dict) -> Dict:
+        return {
+            "page_type": "Product Page",
+            "name": product["name"],
+            "description": f"{product['name']} helps with {generate_benefits_block(product)}.",
+            "ingredients": product["ingredients"],
+            "skin_type": product["skin_type"],
+            "usage": product["usage"],
+            "price": product["price"]
+        }
+
+    def comparison_template(self, product: Dict) -> Dict:
+        fictional_product = {
+            "name": "RadianceX Serum",
+            "ingredients": ["Niacinamide"],
+            "benefits": ["Oil control"],
+            "price": 499
+        }
+
+        return {
+            "page_type": "Comparison Page",
+            "products": [
+                {
+                    "name": product["name"],
+                    "ingredients": product["ingredients"],
+                    "benefits": product["benefits"],
+                    "price": product["price"]
+                },
+                fictional_product
+            ]
+        }
+
+class OrchestratorAgent:
+    def __init__(self):
+        self.parser = ProductDataParserAgent()
+        self.question_agent = QuestionGenerationAgent()
+        self.template_agent = TemplateEngineAgent()
+
+    def run(self):
+        product = self.parser.run(RAW_PRODUCT_DATA)
+        questions = self.question_agent.run(product)
+
+        faq_page = self.template_agent.faq_template(product, questions)
+        product_page = self.template_agent.product_page_template(product)
+        comparison_page = self.template_agent.comparison_template(product)
+
+        self.save_output("faq.json", faq_page)
+        self.save_output("product_page.json", product_page)
+        self.save_output("comparison_page.json", comparison_page)
+
+    @staticmethod
+    def save_output(filename: str, data: Dict):
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+
+if __name__ == "__main__":
+    orchestrator = OrchestratorAgent()
+    orchestrator.run()
+    print("✅ All pages generated successfully.")
